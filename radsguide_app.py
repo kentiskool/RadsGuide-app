@@ -6,7 +6,7 @@ import pandas as pd
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Load your imaging decision support database
-df = pd.read_csv("RadGuideTestCSV.csv", skiprows=1)  # skips duplicate header row from export
+df = pd.read_csv("test.csv", skiprows=1)  # skips duplicate header row from export
 
 # Configure Streamlit page
 st.set_page_config(page_title="RadsGuide Chatbot", layout="centered")
