@@ -5,10 +5,8 @@ import pandas as pd
 # Use API key from Streamlit secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-st.write("✅ CSV loaded successfully!")
-
 # Load your imaging decision support database
-df = pd.read_csv("test.csv")  # skips duplicate header row from export
+df = pd.read_csv("test.csv")
 
 # Configure Streamlit page
 st.set_page_config(page_title="RadsGuide Chatbot", layout="centered")
@@ -23,24 +21,27 @@ Type a clinical question like:
 RadsGuide will recommend the most appropriate imaging study based on your dataset.
 """)
 
+st.write("✅ CSV loaded successfully!")
+st.write(df.head())
+
 # Input box
 user_input = st.text_input("Enter your clinical question:", placeholder="e.g., Rule out pneumonia in immunocompromised patient")
 
 if user_input:
     with st.spinner("Thinking..."):
-        # Create GPT prompt
-        prompt = f"""
-        You are a radiology assistant. Match the clinical question below to the most appropriate entry
-        from this list of clinical indications:
-
-        {df['Clinical indication'].dropna().to_list()}
-
-        Clinical question: \"{user_input}\"
-
-        Respond ONLY with the best-matching phrase from the list.
-        """
-
         try:
+            # Create GPT prompt
+            prompt = f"""
+            You are a radiology assistant. Match the clinical question below to the most appropriate entry
+            from this list of clinical indications:
+
+            {df[df.columns[0]].dropna().to_list()}
+
+            Clinical question: \"{user_input}\"
+
+            Respond ONLY with the best-matching phrase from the list.
+            """
+
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -51,7 +52,7 @@ if user_input:
             match_phrase = response.choices[0].message["content"].strip()
 
             # Search your dataframe for a match
-            match_row = df[df['Clinical indication'].str.strip() == match_phrase]
+            match_row = df[df[df.columns[0]].str.strip() == match_phrase]
 
             if not match_row.empty:
                 row = match_row.iloc[0]
