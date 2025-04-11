@@ -23,6 +23,8 @@ RadsGuide will recommend the most appropriate imaging study based on your datase
 
 st.write("✅ CSV loaded successfully!")
 st.write(df.head())
+st.write("🧪 Indication list preview:")
+st.write(df[df.columns[0]].dropna().tolist()[:10])
 
 # Input box
 user_input = st.text_input("Enter your clinical question:", placeholder="e.g., Rule out pneumonia in immunocompromised patient")
@@ -30,26 +32,9 @@ user_input = st.text_input("Enter your clinical question:", placeholder="e.g., R
 if user_input:
     with st.spinner("Thinking..."):
         try:
-            # Create GPT prompt
-            prompt = f"""
-            You are a radiology assistant. Match the clinical question below to the most appropriate entry
-            from this list of clinical indications:
-
-            {df[df.columns[0]].dropna().to_list()}
-
-            Clinical question: \"{user_input}\"
-
-            Respond ONLY with the best-matching phrase from the list.
-            """
-
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful radiology assistant."},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            match_phrase = response.choices[0].message["content"].strip()
+            # TEMPORARY SKIP: Simulate GPT match instead of calling API
+            st.info("GPT call temporarily disabled. Simulating match...")
+            match_phrase = "Suspected pulmonary embolism"  # Hardcoded test match
 
             # Search your dataframe for a match
             match_row = df[df[df.columns[0]].str.strip() == match_phrase]
