@@ -5,6 +5,8 @@ import pandas as pd
 # Use API key from Streamlit secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
+st.write("✅ CSV loaded successfully!")
+
 # Load your imaging decision support database
 df = pd.read_csv("test.csv", skiprows=1)  # skips duplicate header row from export
 
