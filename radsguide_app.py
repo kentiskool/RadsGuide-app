@@ -31,7 +31,7 @@ if user_input:
         You are a radiology assistant. Match the clinical question below to the most appropriate entry
         from this list of clinical indications:
 
-        {df['Unnamed: 1'].dropna().to_list()}
+        {df['Clinical indication'].dropna().to_list()}
 
         Clinical question: \"{user_input}\"
 
@@ -49,19 +49,19 @@ if user_input:
             match_phrase = response.choices[0].message["content"].strip()
 
             # Search your dataframe for a match
-            match_row = df[df['Unnamed: 1'].str.strip() == match_phrase]
+            match_row = df[df['Clinical indication'].str.strip() == match_phrase]
 
             if not match_row.empty:
                 row = match_row.iloc[0]
                 st.success("✅ Imaging Recommendation:")
                 st.markdown(f"**Clinical Indication:** {match_phrase}")
-                st.markdown(f"**Modality:** {row['Unnamed: 2']}")
-                st.markdown(f"**Contrast:** {row['Unnamed: 3']}")
-                st.markdown(f"**ACR Score:** {row['Unnamed: 4']}")
-                st.markdown(f"**Notes:** {row['Unnamed: 5']}")
-                st.markdown(f"**Special Populations:** {row['Unnamed: 7'] if pd.notna(row['Unnamed: 7']) else 'None'}")
-                st.markdown(f"**Logic Notes:** {row['Unnamed: 8'] if pd.notna(row['Unnamed: 8']) else 'None'}")
-                st.markdown(f"[📄 View ACR Guidelines]({row['Unnamed: 9']})")
+                st.markdown(f"**Modality:** {row['Modality']}")
+                st.markdown(f"**Contrast:** {row['Contrast']}")
+                st.markdown(f"**ACR Score:** {row['ACR Score']}")
+                st.markdown(f"**Notes:** {row['Notes/Caveats']}")
+                st.markdown(f"**Special Populations:** {row['Special population'] if pd.notna(row['Special population']) else 'None'}")
+                st.markdown(f"**Logic Notes:** {row['Logic Notes'] if pd.notna(row['Logic Notes']) else 'None'}")
+                st.markdown(f"[📄 View ACR Guidelines]({row['ACR link']})")
             else:
                 st.warning("No exact match found. Try rephrasing or simplifying the question.")
 
