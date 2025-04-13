@@ -6,7 +6,7 @@ import pandas as pd
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Load the clean imaging dataset
-df = pd.read_csv("RadsGuide_Fully_Cleaned_Streamlined.csv")
+df = pd.read_csv("RadsGuideData.csv")
 
 # App config
 st.set_page_config(page_title="RadsGuide Chatbot", layout="centered")
