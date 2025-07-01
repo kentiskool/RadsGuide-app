@@ -10,7 +10,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 @st.cache_data
 
 def load_data():
-    df = pd.read_csv('rads_guide_data.csv')
+    df = pd.read_csv('RadsGuideDataCSV.csv')
     df['clinical indication'] = df['clinical indication'].astype(str)
     df['modality'] = df['modality'].astype(str)
     return df
