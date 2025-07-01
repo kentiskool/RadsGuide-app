@@ -22,8 +22,9 @@ data = load_data()
 indications = data['clinical indication'].tolist()
 
 # Streamlit UI
-st.title('RadsGuide: ER Imaging Recommendation Chatbot')
-st.write('Ask for an imaging recommendation (e.g., "rule out PE", "abdominal pain").')
+st.title('RadsGuide: ER Imaging Recommendation Chatbot for SLU')
+st.markdown('Based on ACR Appropriateness Criteria tailored to the adult ED setting and SLU-specific protocols**')
+st.write('Ask for an imaging recommendation (e.g., "rule out PE", "abdominal pain", "appendicitis").')
 
 if 'messages' not in st.session_state:
     st.session_state['messages'] = []
