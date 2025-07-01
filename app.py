@@ -21,6 +21,25 @@ data = load_data()
 # Build a list of all clinical indications
 indications = data['clinical indication'].tolist()
 
+# --- Simple password protection ---
+def check_password():
+    def password_entered():
+        if st.session_state["password"] == "slu123":
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Don't store the password
+        else:
+            st.session_state["password_correct"] = False
+
+    if "password_correct" not in st.session_state:
+        st.text_input("Enter password to access RadsGuide:", type="password", on_change=password_entered, key="password")
+        st.stop()
+    elif not st.session_state["password_correct"]:
+        st.text_input("Enter password to access RadsGuide:", type="password", on_change=password_entered, key="password")
+        st.error("😕 Password incorrect")
+        st.stop()
+
+check_password()
+
 # Streamlit UI
 st.title('RadsGuide: ER Imaging Recommendation Chatbot for SLU')
 st.markdown('Based on ACR Appropriateness Criteria, tailored to the adult ED setting and SLU-specific protocols')
