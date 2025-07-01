@@ -4,7 +4,8 @@ import openai
 import os
 
 # Load OpenAI API key from environment variable
-openai.api_key = os.getenv('OPENAI_API_KEY')
+api_key = os.getenv('OPENAI_API_KEY')
+client = openai.OpenAI(api_key=api_key)
 
 # Load the dataset
 @st.cache_data
@@ -48,8 +49,8 @@ if user_input:
         f"Clinical indications:\n- " + '\n- '.join(indications)
     )
 
-    # Call OpenAI to map input to indication
-    response = openai.ChatCompletion.create(
+    # Call OpenAI to map input to indication (new API syntax)
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": system_prompt},
@@ -58,7 +59,11 @@ if user_input:
         max_tokens=50,
         temperature=0
     )
-    mapped_indication = response['choices'][0]['message']['content'].strip()
+    mapped_indication = None
+    if response.choices and response.choices[0].message and response.choices[0].message.content:
+        mapped_indication = response.choices[0].message.content.strip()
+    else:
+        mapped_indication = ""
 
     # Find the modality
     modality = data.loc[data['clinical indication'] == mapped_indication, 'modality'].values
