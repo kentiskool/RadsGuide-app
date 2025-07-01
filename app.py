@@ -67,10 +67,11 @@ if user_input:
 
     # Find the modality
     modality = data.loc[data['clinical indication'] == mapped_indication, 'modality'].values
+    acr_reference = '\n\n_For more information, see the [ACR Appropriateness Criteria](https://gravitas.acr.org/acportal)._'  # Reference line
     if len(modality) > 0:
-        answer = f"**Recommended imaging modality:** {modality[0]}\n\n_Clinical indication matched: {mapped_indication}_"
+        answer = f"**Recommended imaging modality:** {modality[0]}\n\n_Clinical indication matched: {mapped_indication}_" + acr_reference
     else:
-        answer = "Sorry, I couldn't find a matching clinical indication."
+        answer = "Sorry, I couldn't find a matching clinical indication." + acr_reference
 
     st.session_state['messages'].append({'role': 'assistant', 'content': answer})
     with st.chat_message('assistant'):
