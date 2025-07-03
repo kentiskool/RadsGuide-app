@@ -95,4 +95,13 @@ if user_input:
 
     st.session_state['messages'].append({'role': 'assistant', 'content': answer})
     with st.chat_message('assistant'):
-        st.markdown(answer) 
+        st.markdown(answer)
+
+# At the very end of the file, add the disclaimer
+st.markdown(
+    """
+    <hr>
+    <sub>Disclaimer: This tool is for informational purposes only and does not constitute medical advice. Always consult institutional protocols and clinical judgment.</sub>
+    """,
+    unsafe_allow_html=True
+) 
