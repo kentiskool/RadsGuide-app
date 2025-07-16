@@ -194,23 +194,35 @@ if user_input:
     # Set a similarity threshold (lower distance = better match)
     SIMILARITY_THRESHOLD = 0.5  # Raised threshold for more flexible matching
 
+    # Escalation terms for more advanced imaging
+    escalation_terms = [
+        'negative', 'fever', 'elevated wbc', 'next step', 'next imaging', 'follow-up', 'f/u', 'complicated', 'abnormal', 'equivocal', 'persistent', 'worsening', 'not improved', 'no improvement', 'unchanged', 'refractory', 'unresolved', 'recurring', 'repeat', 'second', 'subsequent', 'after', 'post', 'failed', 'inconclusive', 'indeterminate', 'unclear', 'cannot exclude', 'cannot rule out'
+    ]
+    is_simple_query = not any(term in expanded_input.lower() for term in escalation_terms)
+
     # Show top 3 matches if they are within 20% of the best distance, else just the best match
     margin = 0.2  # 20% margin
     top_matches = []
+    initial_imaging_idx = None
     for rank in range(min(3, I.shape[1])):
         idx = int(I[0][rank])
         dist = float(D[0][rank])
-        if dist <= best_distance * (1 + margin):
-            row_idx = phrase_to_row[idx]
-            matched_row = data.iloc[row_idx]
-            matched_phrase = all_phrases[idx]
-            modality = matched_row['Modality']
-            clinical_indication = matched_row['Clinical Indication']
-            top_matches.append((modality, clinical_indication, matched_phrase, dist))
+        row_idx = phrase_to_row[idx]
+        matched_row = data.iloc[row_idx]
+        matched_phrase = all_phrases[idx]
+        modality = matched_row['Modality']
+        clinical_indication = matched_row['Clinical Indication']
+        top_matches.append((modality, clinical_indication, matched_phrase, dist))
+        if 'initial imaging' in matched_phrase.lower() and initial_imaging_idx is None:
+            initial_imaging_idx = len(top_matches) - 1
 
     acr_reference = '\n\n_For more information, see the [ACR Appropriateness Criteria](https://gravitas.acr.org/acportal)._'  # Reference line
 
-    if len(top_matches) == 1:
+    # Always prioritize 'initial imaging' for simple queries
+    if is_simple_query and initial_imaging_idx is not None:
+        modality, clinical_indication, matched_phrase, dist = top_matches[initial_imaging_idx]
+        answer = f"**Recommended imaging modality:** {modality}\n\n_Clinical indication matched: {clinical_indication} (matched phrase: {matched_phrase})_" + acr_reference
+    elif len(top_matches) == 1:
         modality, clinical_indication, matched_phrase, dist = top_matches[0]
         answer = f"**Recommended imaging modality:** {modality}\n\n_Clinical indication matched: {clinical_indication} (matched phrase: {matched_phrase})_" + acr_reference
     elif len(top_matches) > 1:
