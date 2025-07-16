@@ -6,15 +6,6 @@ import numpy as np
 import faiss
 from typing import List
 
-# Disclaimer (always visible)
-st.markdown(
-    """
-    <hr>
-    <sub>Disclaimer: This tool is for informational purposes only and does not constitute medical advice. Always consult institutional protocols and clinical judgment.</sub>
-    """,
-    unsafe_allow_html=True
-)
-
 # --- Simple password protection ---
 def check_password():
     def password_entered():
@@ -24,19 +15,14 @@ def check_password():
         else:
             st.session_state["password_correct"] = False
 
-    disclaimer = """
-    <hr>
-    <sub>Disclaimer: This tool is for informational purposes only and does not constitute medical advice. Always consult institutional protocols and clinical judgment.</sub>
-    """
+    # Disclaimer removed from password prompt
 
     if "password_correct" not in st.session_state:
         st.text_input("Enter password to access RadsGuide:", type="password", on_change=password_entered, key="password")
-        st.markdown(disclaimer, unsafe_allow_html=True)
         st.stop()
     elif not st.session_state["password_correct"]:
         st.text_input("Enter password to access RadsGuide:", type="password", on_change=password_entered, key="password")
         st.error("😕 Password incorrect")
-        st.markdown(disclaimer, unsafe_allow_html=True)
         st.stop()
 
 check_password()
@@ -209,3 +195,12 @@ if user_input:
     st.session_state['messages'].append({'role': 'assistant', 'content': answer})
     with st.chat_message('assistant'):
         st.markdown(answer) 
+
+# Disclaimer (always visible)
+st.markdown(
+    """
+    <hr>
+    <sub>Disclaimer: This tool is for informational purposes only and does not constitute medical advice. Always consult institutional protocols and clinical judgment.</sub>
+    """,
+    unsafe_allow_html=True
+) 
