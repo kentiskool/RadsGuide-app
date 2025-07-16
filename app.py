@@ -148,15 +148,35 @@ if user_input:
 
     # Get embedding for user query
     query_embedding = get_query_embedding(expanded_input).reshape(1, -1).astype(np.float32)
+    # Determine if the query is asking for next imaging after a negative result
+    next_imaging_keywords = [
+        'negative ultrasound',
+        'negative ct',
+        'negative initial imaging',
+        'negative xray',
+        'negative radiograph',
+        'negative mri',
+        'negative scan',
+        'negative study',
+        'next step',
+        'next imaging',
+        'follow-up imaging',
+        'f/u imaging',
+    ]
+    is_next_imaging = any(kw in expanded_input.lower() for kw in next_imaging_keywords)
+
     # Search FAISS index for top 5 best matches
     D, I = index.search(query_embedding, 5)
     best_idx = int(I[0][0])
     best_distance = float(D[0][0])
-    # Try to prioritize a match with 'initial imaging' in the phrase
+    # Try to prioritize a match with 'next imaging' or 'initial imaging' in the phrase
     prioritized_idx = None
     for rank in range(I.shape[1]):
-        phrase = all_phrases[I[0][rank]]
-        if 'initial imaging' in phrase.lower():
+        phrase = all_phrases[I[0][rank]].lower()
+        if is_next_imaging and 'next imaging' in phrase:
+            prioritized_idx = rank
+            break
+        elif not is_next_imaging and 'initial imaging' in phrase:
             prioritized_idx = rank
             break
     if prioritized_idx is not None:
