@@ -222,6 +222,18 @@ if user_input:
         initial_match = top_matches.pop(initial_imaging_idx)
         top_matches = [initial_match] + top_matches
 
+    # Deduplicate top_matches by (clinical_indication, modality)
+    seen = set()
+    deduped_matches = []
+    for match in top_matches:
+        key = (match[1], match[0])  # (clinical_indication, modality)
+        if key not in seen:
+            deduped_matches.append(match)
+            seen.add(key)
+        if len(deduped_matches) == 3:
+            break
+    top_matches = deduped_matches
+
     acr_reference = '\n\n_For more information, see the [ACR Appropriateness Criteria](https://gravitas.acr.org/acportal)._'  # Reference line
 
     if len(top_matches) == 1:
