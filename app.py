@@ -162,7 +162,7 @@ if user_input:
     st.info(f"**DEBUG:** Best match: '{matched_phrase}' (distance: {best_distance:.4f})")
 
     # Set a similarity threshold (lower distance = better match)
-    SIMILARITY_THRESHOLD = 0.35  # You may want to tune this value
+    SIMILARITY_THRESHOLD = 0.45  # Raised threshold for more flexible matching
 
     acr_reference = '\n\n_For more information, see the [ACR Appropriateness Criteria](https://gravitas.acr.org/acportal)._'  # Reference line
 
