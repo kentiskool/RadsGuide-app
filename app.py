@@ -242,7 +242,7 @@ if user_input:
     elif len(top_matches) > 1:
         answer = "**Top relevant imaging recommendations:**\n"
         for i, (modality, clinical_indication, matched_phrase, dist) in enumerate(top_matches, 1):
-            answer += f"\n**Option {i}:** {modality}\n\n_Clinical indication matched:_\n{clinical_indication}\n"
+            answer += f"\n**Option {i}:** {modality}\n\n_Clinical indication matched:_\n{clinical_indication}\n\n"
         answer += acr_reference
     else:
         # Fallback: Use GPT-4o-mini to generate a response referencing the ACR site
