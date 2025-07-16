@@ -238,11 +238,11 @@ if user_input:
 
     if len(top_matches) == 1:
         modality, clinical_indication, matched_phrase, dist = top_matches[0]
-        answer = f"**Recommended imaging modality:** {modality}\n\n_Clinical indication matched: {clinical_indication} (matched phrase: {matched_phrase})_" + acr_reference
+        answer = f"**Recommended imaging modality:** {modality}\n\n_Clinical indication matched:_\n{clinical_indication}" + acr_reference
     elif len(top_matches) > 1:
         answer = "**Top relevant imaging recommendations:**\n"
         for i, (modality, clinical_indication, matched_phrase, dist) in enumerate(top_matches, 1):
-            answer += f"\n**Option {i}:** {modality}\n_Clinical indication matched: {clinical_indication} (matched phrase: {matched_phrase}, distance: {dist:.4f})_\n"
+            answer += f"\n**Option {i}:** {modality}\n\n_Clinical indication matched:_\n{clinical_indication}\n"
         answer += acr_reference
     else:
         # Fallback: Use GPT-4o-mini to generate a response referencing the ACR site
