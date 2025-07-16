@@ -2,24 +2,18 @@ import streamlit as st
 import pandas as pd
 import openai
 import os
+import numpy as np
+import faiss
+from typing import List
 
-# Load OpenAI API key from environment variable
-api_key = os.getenv('OPENAI_API_KEY')
-client = openai.OpenAI(api_key=api_key)
-
-# Load the dataset
-@st.cache_data
-
-def load_data():
-    df = pd.read_csv('RadsGuideDataCSV.csv')
-    df['clinical indication'] = df['clinical indication'].astype(str)
-    df['modality'] = df['modality'].astype(str)
-    return df
-
-data = load_data()
-
-# Build a list of all clinical indications
-indications = data['clinical indication'].tolist()
+# Disclaimer (always visible)
+st.markdown(
+    """
+    <hr>
+    <sub>Disclaimer: This tool is for informational purposes only and does not constitute medical advice. Always consult institutional protocols and clinical judgment.</sub>
+    """,
+    unsafe_allow_html=True
+)
 
 # --- Simple password protection ---
 def check_password():
@@ -47,10 +41,66 @@ def check_password():
 
 check_password()
 
+# Load OpenAI API key from environment variable
+api_key = os.getenv('OPENAI_API_KEY')
+client = openai.OpenAI(api_key=api_key)
+
+# Load the dataset
+@st.cache_data
+
+def load_data():
+    df = pd.read_csv('RadsGuideData_clean.csv')
+    df['canonical'] = df['canonical'].astype(str)
+    df['synonyms'] = df['synonyms'].astype(str)
+    df['Modality'] = df['Modality'].astype(str)
+    df['Clinical Indication'] = df['Clinical Indication'].astype(str)
+    return df
+
+data = load_data()
+
+# Prepare all phrases (canonical + synonyms)
+all_phrases = []
+phrase_to_row = []  # Maps phrase index to row index in data
+for idx, row in data.iterrows():
+    # Add canonical
+    all_phrases.append(str(row['canonical']))
+    phrase_to_row.append(idx)
+    # Add synonyms (split by semicolon or comma)
+    syns = str(row['synonyms'])
+    if syns and syns.lower() != 'nan':
+        for syn in syns.replace(';', ',').split(','):
+            syn = syn.strip()
+            if syn:
+                all_phrases.append(syn)
+                phrase_to_row.append(idx)
+
+# --- Embedding utilities ---
+@st.cache_data(show_spinner=True)
+def get_phrase_embeddings(phrases: List[str]):
+    # Get embeddings for all phrases (batch)
+    response = client.embeddings.create(
+        input=phrases,
+        model="text-embedding-3-small"
+    )
+    return np.array([e.embedding for e in response.data], dtype=np.float32)
+
+@st.cache_data(show_spinner=False)
+def get_query_embedding(query: str):
+    response = client.embeddings.create(
+        input=[query],
+        model="text-embedding-3-small"
+    )
+    return np.array(response.data[0].embedding, dtype=np.float32)
+
+# Build FAISS index
+phrase_embeddings = get_phrase_embeddings(all_phrases)
+index = faiss.IndexFlatL2(phrase_embeddings.shape[1])
+index.add(phrase_embeddings)
+
 # Streamlit UI
-st.title('RadsGuide: ER Imaging Recommendation Chatbot for SLU')
-st.markdown('Based on ACR Appropriateness Criteria, tailored to the adult ED setting and SLU-specific protocols')
-st.write('Ask for an imaging recommendation (e.g., "rule out PE", "abdominal pain", "appendicitis").')
+st.title('RadsGuide: ER Imaging Recommendation Chatbot')
+st.markdown('**Based on ACR Appropriateness Criteria tailored to the adult ED setting and SLU-specific protocols**')
+st.write('Ask for an imaging recommendation (e.g., "rule out PE", "abdominal pain").')
 
 if 'messages' not in st.session_state:
     st.session_state['messages'] = []
@@ -68,47 +118,49 @@ if user_input:
     with st.chat_message('user'):
         st.markdown(user_input)
 
-    # Build the system prompt
-    system_prompt = (
-        "You are a medical imaging recommendation assistant. "
-        "Given a clinical question, select the single closest matching clinical indication from the list below. "
-        "Only respond with the exact clinical indication from the list. Do not invent or extrapolate.\n\n"
-        f"Clinical indications:\n- " + '\n- '.join(indications)
-    )
+    # Get embedding for user query
+    query_embedding = get_query_embedding(user_input).reshape(1, -1).astype(np.float32)
+    # Search FAISS index for best match
+    D, I = index.search(query_embedding, 1)
+    best_idx = int(I[0][0])
+    best_distance = float(D[0][0])
+    row_idx = phrase_to_row[best_idx]
+    matched_row = data.iloc[row_idx]
+    matched_phrase = all_phrases[best_idx]
+    modality = matched_row['Modality']
+    clinical_indication = matched_row['Clinical Indication']
 
-    # Call OpenAI to map input to indication (new API syntax)
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_input}
-        ],
-        max_tokens=50,
-        temperature=0
-    )
-    mapped_indication = None
-    if response.choices and response.choices[0].message and response.choices[0].message.content:
-        mapped_indication = response.choices[0].message.content.strip()
-    else:
-        mapped_indication = ""
+    # Set a similarity threshold (lower distance = better match)
+    SIMILARITY_THRESHOLD = 0.35  # You may want to tune this value
 
-    # Find the modality
-    modality = data.loc[data['clinical indication'] == mapped_indication, 'modality'].values
     acr_reference = '\n\n_For more information, see the [ACR Appropriateness Criteria](https://gravitas.acr.org/acportal)._'  # Reference line
-    if len(modality) > 0:
-        answer = f"**Recommended imaging modality:** {modality[0]}\n\n_Clinical indication matched: {mapped_indication}_" + acr_reference
+
+    if best_distance < SIMILARITY_THRESHOLD:
+        answer = f"**Recommended imaging modality:** {modality}\n\n_Clinical indication matched: {clinical_indication} (matched phrase: {matched_phrase})_" + acr_reference
     else:
-        answer = "Sorry, I couldn't find a matching clinical indication." + acr_reference
+        # Fallback: Use GPT-4o-mini to generate a response referencing the ACR site
+        gpt_prompt = (
+            f"A clinician is seeking the most appropriate imaging modality for the following clinical scenario: '{user_input}'. "
+            "You do not have a local dataset to reference. Based on your knowledge and the ACR Appropriateness Criteria (https://www.acr.org/Clinical-Resources/ACR-Appropriateness-Criteria), what is the best recommendation? "
+            "Clearly state that this answer is based on your model knowledge and not a live web search."
+        )
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a medical imaging recommendation assistant."},
+                {"role": "user", "content": gpt_prompt}
+            ],
+            max_tokens=300,
+            temperature=0.2
+        )
+        gpt_answer = response.choices[0].message.content if response.choices[0].message.content else "No answer returned."
+        gpt_answer = gpt_answer.strip()
+        answer = (
+            f"**No close match found in the local dataset.**\n\n"
+            f"**GPT-4o-mini result:**\n{gpt_answer}\n\n"
+            f"_This answer was generated by GPT-4o-mini based on its model knowledge and the ACR Appropriateness Criteria, not from a live web search or the local dataset. For more information, see the [ACR Appropriateness Criteria](https://www.acr.org/Clinical-Resources/ACR-Appropriateness-Criteria)._"
+        )
 
     st.session_state['messages'].append({'role': 'assistant', 'content': answer})
     with st.chat_message('assistant'):
-        st.markdown(answer)
-
-# At the very end of the file, add the disclaimer for the main app
-st.markdown(
-    """
-    <hr>
-    <sub>Disclaimer: This tool is for informational purposes only and does not constitute medical advice. Always consult institutional protocols and clinical judgment.</sub>
-    """,
-    unsafe_allow_html=True
-) 
+        st.markdown(answer) 
