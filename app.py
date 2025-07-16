@@ -240,9 +240,9 @@ if user_input:
         modality, clinical_indication, matched_phrase, dist = top_matches[0]
         answer = f"**Recommended imaging modality:** {modality}\n\n_Clinical indication matched:_\n{clinical_indication}" + acr_reference
     elif len(top_matches) > 1:
-        answer = "**Top relevant imaging recommendations:**\n"
+        answer = "<b>Top relevant imaging recommendations:</b><br>"
         for i, (modality, clinical_indication, matched_phrase, dist) in enumerate(top_matches, 1):
-            answer += f"\n**Option {i}:** {modality}\n\n_Clinical indication matched:_\n{clinical_indication}\n\n"
+            answer += f"<br><b>Option {i}:</b> {modality}<br><br><i>Clinical indication matched:</i><br>{clinical_indication}<br><br>"
         answer += acr_reference
     else:
         # Fallback: Use GPT-4o-mini to generate a response referencing the ACR site
@@ -270,7 +270,7 @@ if user_input:
 
     st.session_state['messages'].append({'role': 'assistant', 'content': answer})
     with st.chat_message('assistant'):
-        st.markdown(answer) 
+        st.markdown(answer, unsafe_allow_html=True)
 
 # Disclaimer (always visible)
 st.markdown(
