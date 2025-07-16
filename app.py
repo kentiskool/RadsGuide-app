@@ -216,13 +216,15 @@ if user_input:
         if 'initial imaging' in matched_phrase.lower() and initial_imaging_idx is None:
             initial_imaging_idx = len(top_matches) - 1
 
+    # For simple queries, if one of the top 3 matches is 'initial imaging', move it to the top
+    if is_simple_query and initial_imaging_idx is not None and len(top_matches) > 1:
+        # Move the initial imaging match to the front
+        initial_match = top_matches.pop(initial_imaging_idx)
+        top_matches = [initial_match] + top_matches
+
     acr_reference = '\n\n_For more information, see the [ACR Appropriateness Criteria](https://gravitas.acr.org/acportal)._'  # Reference line
 
-    # Always prioritize 'initial imaging' for simple queries
-    if is_simple_query and initial_imaging_idx is not None:
-        modality, clinical_indication, matched_phrase, dist = top_matches[initial_imaging_idx]
-        answer = f"**Recommended imaging modality:** {modality}\n\n_Clinical indication matched: {clinical_indication} (matched phrase: {matched_phrase})_" + acr_reference
-    elif len(top_matches) == 1:
+    if len(top_matches) == 1:
         modality, clinical_indication, matched_phrase, dist = top_matches[0]
         answer = f"**Recommended imaging modality:** {modality}\n\n_Clinical indication matched: {clinical_indication} (matched phrase: {matched_phrase})_" + acr_reference
     elif len(top_matches) > 1:
