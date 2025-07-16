@@ -113,13 +113,55 @@ for msg in st.session_state['messages']:
 # User input
 user_input = st.chat_input('Enter your clinical question...')
 
+# Abbreviation expansion dictionary for common clinical terms
+ABBREVIATION_MAP = {
+    "ruq": "right upper quadrant",
+    "luq": "left upper quadrant",
+    "rlq": "right lower quadrant",
+    "llq": "left lower quadrant",
+    "sob": "shortness of breath",
+    "cp": "chest pain",
+    "pe": "pulmonary embolism",
+    "dvt": "deep vein thrombosis",
+    "uti": "urinary tract infection",
+    "gi": "gastrointestinal",
+    "ct": "computed tomography",
+    "us": "ultrasound",
+    "fx": "fracture",
+    "abd": "abdomen",
+    "hx": "history",
+    "w/u": "workup",
+    "r/o": "rule out",
+    "c/o": "complains of",
+    "n/v": "nausea and vomiting",
+    "loc": "loss of consciousness",
+    "s/p": "status post",
+    "h/o": "history of",
+    "wbc": "white blood cell",
+    "iv": "intravenous",
+    # Add more as needed
+}
+
+def expand_abbreviations(text):
+    words = text.split()
+    expanded = []
+    for word in words:
+        key = word.lower().strip('.,;:')
+        if key in ABBREVIATION_MAP:
+            expanded.append(ABBREVIATION_MAP[key])
+        else:
+            expanded.append(word)
+    return ' '.join(expanded)
+
 if user_input:
+    # Preprocess user input to expand abbreviations
+    expanded_input = expand_abbreviations(user_input)
     st.session_state['messages'].append({'role': 'user', 'content': user_input})
     with st.chat_message('user'):
         st.markdown(user_input)
 
     # Get embedding for user query
-    query_embedding = get_query_embedding(user_input).reshape(1, -1).astype(np.float32)
+    query_embedding = get_query_embedding(expanded_input).reshape(1, -1).astype(np.float32)
     # Search FAISS index for best match
     D, I = index.search(query_embedding, 1)
     best_idx = int(I[0][0])
@@ -129,6 +171,9 @@ if user_input:
     matched_phrase = all_phrases[best_idx]
     modality = matched_row['Modality']
     clinical_indication = matched_row['Clinical Indication']
+
+    # Debug display: show best match and distance
+    st.info(f"**DEBUG:** Best match: '{matched_phrase}' (distance: {best_distance:.4f})")
 
     # Set a similarity threshold (lower distance = better match)
     SIMILARITY_THRESHOLD = 0.35  # You may want to tune this value
