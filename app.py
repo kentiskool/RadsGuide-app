@@ -86,7 +86,7 @@ index.add(phrase_embeddings)
 # Streamlit UI
 st.title('RadsGuide: ER Imaging Recommendation Chatbot')
 st.markdown('**Based on ACR Appropriateness Criteria tailored to the adult ED setting and SLU-specific protocols**')
-st.write('Ask for an imaging recommendation (e.g., "rule out PE", "abdominal pain").')
+st.write('Ask for an imaging recommendation (e.g., "rule out PE", "appendicitis").')
 
 if 'messages' not in st.session_state:
     st.session_state['messages'] = []
@@ -194,10 +194,30 @@ if user_input:
     # Set a similarity threshold (lower distance = better match)
     SIMILARITY_THRESHOLD = 0.5  # Raised threshold for more flexible matching
 
+    # Show top 3 matches if they are within 20% of the best distance, else just the best match
+    margin = 0.2  # 20% margin
+    top_matches = []
+    for rank in range(min(3, I.shape[1])):
+        idx = int(I[0][rank])
+        dist = float(D[0][rank])
+        if dist <= best_distance * (1 + margin):
+            row_idx = phrase_to_row[idx]
+            matched_row = data.iloc[row_idx]
+            matched_phrase = all_phrases[idx]
+            modality = matched_row['Modality']
+            clinical_indication = matched_row['Clinical Indication']
+            top_matches.append((modality, clinical_indication, matched_phrase, dist))
+
     acr_reference = '\n\n_For more information, see the [ACR Appropriateness Criteria](https://gravitas.acr.org/acportal)._'  # Reference line
 
-    if best_distance < SIMILARITY_THRESHOLD:
+    if len(top_matches) == 1:
+        modality, clinical_indication, matched_phrase, dist = top_matches[0]
         answer = f"**Recommended imaging modality:** {modality}\n\n_Clinical indication matched: {clinical_indication} (matched phrase: {matched_phrase})_" + acr_reference
+    elif len(top_matches) > 1:
+        answer = "**Top relevant imaging recommendations:**\n"
+        for i, (modality, clinical_indication, matched_phrase, dist) in enumerate(top_matches, 1):
+            answer += f"\n**Option {i}:** {modality}\n_Clinical indication matched: {clinical_indication} (matched phrase: {matched_phrase}, distance: {dist:.4f})_\n"
+        answer += acr_reference
     else:
         # Fallback: Use GPT-4o-mini to generate a response referencing the ACR site
         gpt_prompt = (
