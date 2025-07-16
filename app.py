@@ -148,10 +148,20 @@ if user_input:
 
     # Get embedding for user query
     query_embedding = get_query_embedding(expanded_input).reshape(1, -1).astype(np.float32)
-    # Search FAISS index for best match
-    D, I = index.search(query_embedding, 1)
+    # Search FAISS index for top 5 best matches
+    D, I = index.search(query_embedding, 5)
     best_idx = int(I[0][0])
     best_distance = float(D[0][0])
+    # Try to prioritize a match with 'initial imaging' in the phrase
+    prioritized_idx = None
+    for rank in range(I.shape[1]):
+        phrase = all_phrases[I[0][rank]]
+        if 'initial imaging' in phrase.lower():
+            prioritized_idx = rank
+            break
+    if prioritized_idx is not None:
+        best_idx = int(I[0][prioritized_idx])
+        best_distance = float(D[0][prioritized_idx])
     row_idx = phrase_to_row[best_idx]
     matched_row = data.iloc[row_idx]
     matched_phrase = all_phrases[best_idx]
